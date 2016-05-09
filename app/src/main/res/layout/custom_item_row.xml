@@ -10,5 +10,4 @@
         android:src="@mipmap/ic_launcher"
         android:scaleType="fitXY" />
 
-
 </RelativeLayout>

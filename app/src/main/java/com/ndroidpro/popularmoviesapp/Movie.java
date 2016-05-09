@@ -1,42 +1,89 @@
 package com.ndroidpro.popularmoviesapp;
 
-import java.util.ArrayList;
-import java.util.List;
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 /**
  * Created by Nikhil Vashistha on 9/5/2016.
  */
-public class Movie {
+public class Movie implements Parcelable {
 
-    @SerializedName("id")
-    @Expose
     private Integer id;
-    @SerializedName("original_title")
-    @Expose
     private String originalTitle;
-    @SerializedName("overview")
-    @Expose
     private String overview;
-    @SerializedName("release_date")
-    @Expose
     private String releaseDate;
-    @SerializedName("poster_path")
-    @Expose
-    private Object posterPath;
-    @SerializedName("popularity")
-    @Expose
+    private String posterPath;
     private Integer popularity;
-    @SerializedName("title")
-    @Expose
     private String title;
-    @SerializedName("vote_average")
-    @ Expose
     private Integer voteAverage;
-    @SerializedName("vote_count")
-    @Expose
     private Integer voteCount;
+
+    public Movie(){
+
+    }
+
+    protected Movie(Parcel in) {
+        id = in.readByte() == 0x00 ? null : in.readInt();
+        originalTitle = in.readString();
+        overview = in.readString();
+        releaseDate = in.readString();
+        posterPath = in.readString();
+        popularity = in.readByte() == 0x00 ? null : in.readInt();
+        title = in.readString();
+        voteAverage = in.readByte() == 0x00 ? null : in.readInt();
+        voteCount = in.readByte() == 0x00 ? null : in.readInt();
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        if (id == null) {
+            dest.writeByte((byte) (0x00));
+        } else {
+            dest.writeByte((byte) (0x01));
+            dest.writeInt(id);
+        }
+        dest.writeString(originalTitle);
+        dest.writeString(overview);
+        dest.writeString(releaseDate);
+        dest.writeString(posterPath);
+        if (popularity == null) {
+            dest.writeByte((byte) (0x00));
+        } else {
+            dest.writeByte((byte) (0x01));
+            dest.writeInt(popularity);
+        }
+        dest.writeString(title);
+        if (voteAverage == null) {
+            dest.writeByte((byte) (0x00));
+        } else {
+            dest.writeByte((byte) (0x01));
+            dest.writeInt(voteAverage);
+        }
+        if (voteCount == null) {
+            dest.writeByte((byte) (0x00));
+        } else {
+            dest.writeByte((byte) (0x01));
+            dest.writeInt(voteCount);
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
+        @Override
+        public Movie createFromParcel(Parcel in) {
+            return new Movie(in);
+        }
+
+        @Override
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
 
     /**
      *
@@ -115,7 +162,7 @@ public class Movie {
      * @return
      * The posterPath
      */
-    public Object getPosterPath() {
+    public String getPosterPath() {
         return posterPath;
     }
 
@@ -124,7 +171,7 @@ public class Movie {
      * @param posterPath
      * The poster_path
      */
-    public void setPosterPath(Object posterPath) {
+    public void setPosterPath(String posterPath) {
         this.posterPath = posterPath;
     }
 

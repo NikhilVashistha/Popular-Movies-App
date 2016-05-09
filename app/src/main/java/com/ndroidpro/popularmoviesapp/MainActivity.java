@@ -5,11 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -27,8 +26,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -38,19 +39,20 @@ import java.util.ArrayList;
  */
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener{
 
-    final static String TAG = "Movie Results";
+    private static final String TAG = "MainActivity";
+    private static final String IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w185";
 
     GridView mMainGrid;
     ArrayList<Movie> mPopularList;
     ArrayList<Movie> mTopVotedList;
-    final static String POP_LIST = "popList";
+    final static String POPULAR_LIST = "poppularList";
     final static String TOP_VOTE_LIST = "topVoteList";
 
     // Handling Saving Data before App is closed
     @Override
     protected void onSaveInstanceState(Bundle outState) {
 
-        outState.putSerializable(POP_LIST, mPopularList);
+        outState.putSerializable(POPULAR_LIST, mPopularList);
         outState.putSerializable(TOP_VOTE_LIST, mTopVotedList);
         super.onSaveInstanceState(outState);
 
@@ -62,9 +64,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
 
-
         // Loading Saved data
-        mPopularList = (ArrayList<Movie>) savedInstanceState.getSerializable(POP_LIST);
+        mPopularList = (ArrayList<Movie>) savedInstanceState.getSerializable(POPULAR_LIST);
         mTopVotedList = (ArrayList<Movie>) savedInstanceState.getSerializable(TOP_VOTE_LIST);
         loadPreferenceList();
     }
@@ -88,7 +89,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
 
         mMainGrid.setOnItemClickListener(MainActivity.this);
-
     }
 
     @Override
@@ -97,8 +97,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         setContentView(R.layout.activity_main);
 
         mMainGrid = (GridView) findViewById(R.id.topMovieGrid);
-
-
     }
 
     @Override
@@ -117,7 +115,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
-            Intent optionIntent = new Intent(this, MainActivity.class);
+            Intent optionIntent = new Intent(this, SettingsActivity.class);
             startActivity(optionIntent);
             return true;
         }
@@ -142,12 +140,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Movie movie = (Movie) parent.getAdapter().getItem(position);
 
-        Intent intent = new Intent(MainActivity.this, MainActivity.class);
-//        intent.putExtra("Movie", movie);
+        Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+        intent.putExtra("movies_details", movie);
         startActivity(intent);
     }
 
     public class MainSync extends AsyncTask<Void, Void, Void> {
+        private static final String POPULAR_MOVIE_API_URL = "http://api.themoviedb.org/3/movie/popular?api_key=";
+        private static final String TOP_RATED_MOVIE_API_URL = "http://api.themoviedb.org/3/movie/top_rated?api_key=";
         ProgressDialog dialog;
 
         @Override
@@ -155,7 +155,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             super.onPreExecute();
             dialog = new ProgressDialog(MainActivity.this);
             dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-
             dialog.setTitle("Loading...");
             dialog.show();
 
@@ -167,10 +166,10 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             String WebAddress;
             String WebAddressVote;
 
-            WebAddress = "http://api.themoviedb.org/3/discover/movie?sort_by=popularity.desc&api_key="
-                    + BuildConfig.THE_MOVIE_DB_API_KEY;
+            WebAddress = POPULAR_MOVIE_API_URL
+                   + BuildConfig.THE_MOVIE_DB_API_KEY;
 
-            WebAddressVote = "http://api.themoviedb.org/3/discover/movie?sort_by=vote_average.desc&api_key="
+            WebAddressVote = TOP_RATED_MOVIE_API_URL
                     + BuildConfig.THE_MOVIE_DB_API_KEY;
 
             mPopularList = new ArrayList<>();
@@ -197,7 +196,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     private void loadPreferenceList() {
         // Checking Shared Preference for data
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-        if (sharedPreferences.getString("ORG_PREF_LIST", "popular").equals("popular")) {
+        if (sharedPreferences.getString(getString(R.string.display_preferences_sort_order_key),
+                getString(R.string.display_preferences_sort_default_value)).equals("popular")) {
             loadMovieAdapter(mPopularList);
         } else {
             loadMovieAdapter(mTopVotedList);
@@ -209,18 +209,35 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         CustomGridAdapter adapter = new CustomGridAdapter(MainActivity.this,
                 _list);
         mMainGrid.setAdapter(adapter);
+        adapter.notifyDataSetChanged();
     }
 
     private void URLResult(String webAddress, ArrayList<Movie> _List) {
         try {
-
+            BufferedReader reader = null;
             URL url = new URL(webAddress);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
             connection.connect();
 
             InputStream inputStream = connection.getInputStream();
+            StringBuffer buffer = new StringBuffer();
+            if (inputStream == null) {
+                return;
+            }
+            reader = new BufferedReader(new InputStreamReader(inputStream));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line + "\n");
+            }
+
+            if (buffer.length() == 0) {
+                return;
+            }
+            String results = buffer.toString();
 //            String results = IOUtils.toString(inputStream);
-//            jsonParser(results, _List);
+            jsonParser(results, _List);
             inputStream.close();
 
         } catch (IOException e) {
@@ -243,7 +260,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 indexMovie.setOriginalTitle(indexObject.getString("original_title"));
                 indexMovie.setOverview(indexObject.getString("overview"));
                 indexMovie.setReleaseDate(indexObject.getString("release_date"));
-                indexMovie.setPosterPath(indexObject.getString("poster_path"));
+                indexMovie.setPosterPath(IMAGE_BASE_URL + indexObject.getString("poster_path"));
                 indexMovie.setPopularity(indexObject.getInt("popularity"));
                 indexMovie.setTitle(indexObject.getString("title"));
                 indexMovie.setVoteAverage(indexObject.getInt("vote_average"));
@@ -258,6 +275,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
 
     public class CustomGridAdapter extends BaseAdapter {
+
         Context context;
         ArrayList<Movie> movieList;
 
@@ -325,9 +343,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             }
             Movie movieDb = getItem(position);
 
-
             ImageView imageViewcustom = (ImageView) convertView.findViewById(R.id.customImageView);
-            Picasso.with(context).load("https://image.tmdb.org/t/p/w185" + movieDb.getPosterPath())
+            Picasso.with(context).load(movieDb.getPosterPath())
                     .placeholder(R.mipmap.ic_launcher)
                     .into(imageViewcustom);
 
