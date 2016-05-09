@@ -17,12 +17,9 @@
     <string name="display_preferences_sort_order_key">sortType</string>
     <string name="display_preferences_sort_default_value">popular</string>
     <string name="sort_array_item_1">Most Popular</string>
-    <string name="sort_array_item_2">Top Rated</string>
+    <string name="sort_array_item_2">Highest Rated</string>
 
     <string name="sort_array_item_1_value">popular</string>
     <string name="sort_array_item_2_value">top_rated</string>
-
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
 
 </resources>
